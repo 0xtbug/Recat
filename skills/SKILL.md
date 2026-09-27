@@ -47,7 +47,15 @@ The evidence field is an array of relative file path strings, for example ["READ
 
 ## JSON schema and actual outcomes
 
-Save UTF-8 JSON with id, title, asset_type (web, smart_contract, or other), vulnerability_type, severity (critical/high/medium/low/info), status, verified, found_at (ISO 8601 when known, otherwise null), impact, steps_to_reproduce (array of strings), payload, and evidence (array of relative filenames).
+Save UTF-8 JSON with id, title, asset_type (web, smart_contract, or other), vulnerability_type, severity (critical/high/medium/low/info), status, verified, found_at (ISO 8601 when known, otherwise null), impact, deliverability, data_exposure, harm, cvss_score, cvss_vector, steps_to_reproduce (array of strings), payload, and evidence (array of relative filenames).
+
+Recat displays the following top-level JSON fields directly; putting their assessment only in README.md or impact leaves the corresponding dashboard fields empty:
+- deliverability: describe how an attacker reaches or triggers the issue, including required access, privileges, user interaction, and relevant prerequisites. Identify what was observed and what remains untested.
+- data_exposure: describe the affected data, who can access it, and the demonstrated scope. If the issue does not expose data, explain that with the available evidence. If exposure has not been checked, state that limitation explicitly.
+- harm: describe the supported technical and business consequences, separating demonstrated harm from possible impact and its prerequisites.
+- cvss_score and cvss_vector: provide the assessed numeric score (0 through 10) and matching version-prefixed CVSS vector when enough evidence supports the metric choices. Document the version, metric rationale, and whether the assessment is provisional in README.md. Do not infer a score from the severity label or copy the examples' severity into a score. When CVSS cannot yet be assessed or is not applicable, use null for cvss_score and an empty string for cvss_vector, and explain why in README.md.
+
+Include these fields when creating or updating a finding. Use concise, finding-specific explanations for unknown impact assessments rather than empty strings or invented observations. For existing findings, preserve supported assessments and fill gaps from available evidence; do not replace them with generic pending text.
 
 Choose web for websites and HTTP APIs, smart_contract for on-chain contract findings, and other for every remaining asset category, including mobile apps, desktop software, infrastructure, networks, hardware, and general security findings. Always set asset_type explicitly; an Other finding can still have a supporting URL or host. Describe its actual affected asset and platform in README.md and use source_file, source_line, host, or other relevant JSON fields when known. Keep project and finding folders in the same active source tree for all three categories.
 
@@ -87,6 +95,11 @@ This fictional candidate illustrates the schema. Create README.md and PASTE_EMAI
   "parameter": "q",
   "method": "GET",
   "impact": "Pending scan and verification.",
+  "deliverability": "The suspected entry point is the q parameter in the search URL. Execution in a user's browser and required user interaction have not been verified.",
+  "data_exposure": "No data exposure has been demonstrated; access to browser or application data remains untested.",
+  "harm": "Possible script execution in the application origin requires verification. No account compromise or state change has been demonstrated.",
+  "cvss_score": null,
+  "cvss_vector": "",
   "steps_to_reproduce": [],
   "payload": "",
   "evidence": [
@@ -118,6 +131,11 @@ This fictional candidate uses the same folder layout, with poc/ and test/ artifa
   "source_file": "src/Treasury.sol",
   "source_line": 42,
   "impact": "Pending scan and verification.",
+  "deliverability": "The suspected entry point is Treasury.setConfig. Caller permissions and whether an unauthorized call succeeds have not been checked.",
+  "data_exposure": "No additional data exposure has been demonstrated. The suspected issue concerns configuration write access.",
+  "harm": "Unauthorized configuration changes could affect protocol behavior if the suspected access-control issue is confirmed. No fund loss has been demonstrated.",
+  "cvss_score": null,
+  "cvss_vector": "",
   "steps_to_reproduce": [],
   "payload": "",
   "evidence": [
@@ -142,6 +160,11 @@ This fictional mobile finding uses asset_type other. It shares the same report a
   "verified": false,
   "source_file": "app/logging.ts",
   "impact": "Pending scan and verification.",
+  "deliverability": "The suspected entry point is mobile app logging. Access requirements for the logs and whether sensitive values are recorded remain unchecked.",
+  "data_exposure": "The log contents and accessible sensitive data have not been inspected; exposure is unverified.",
+  "harm": "Credential or personal-data disclosure depends on the actual logged values and who can read them. No misuse has been demonstrated.",
+  "cvss_score": null,
+  "cvss_vector": "",
   "steps_to_reproduce": [],
   "payload": "",
   "evidence": [

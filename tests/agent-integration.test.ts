@@ -56,6 +56,15 @@ test("the single skill contains three importable asset examples and the active o
     expect(data.warnings).toEqual([])
     expect(data.findings[0].status).toBe("candidate")
     expect(data.findings[0].verified).toBe(false)
+    expect(data.findings[0].delivery).toBe(example.deliverability)
+    expect(data.findings[0].exposure).toBe(example.data_exposure)
+    expect(data.findings[0].harm).toBe(example.harm)
+    expect(data.findings[0].delivery.trim()).not.toBe("")
+    expect(data.findings[0].exposure.trim()).not.toBe("")
+    expect(data.findings[0].harm.trim()).not.toBe("")
+    expect(example.cvss_score).toBeNull()
+    expect(data.findings[0].cvss).toBeNull()
+    expect(data.findings[0].vector).toBe("")
     expect(data.findings[0].evidence).toEqual([
       "README.md",
       "PASTE_EMAIL_READY.md",

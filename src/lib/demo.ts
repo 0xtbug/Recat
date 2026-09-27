@@ -1,4 +1,5 @@
 import { normalizeDataset } from "./findings"
+import { demoAssessments } from "./demo-assessments"
 
 const rows = [
   [
@@ -8,7 +9,6 @@ const rows = [
     "name",
     "POST",
     0,
-    6.1,
   ],
   [
     "Stored XSS in the guestbook comment field",
@@ -17,7 +17,6 @@ const rows = [
     "comment",
     "POST",
     1,
-    8.0,
   ],
   [
     "DOM XSS via the location.hash router",
@@ -26,7 +25,6 @@ const rows = [
     "hash",
     "GET",
     2,
-    7.5,
   ],
   [
     "Reflected XSS in the search parameter",
@@ -35,17 +33,8 @@ const rows = [
     "q",
     "GET",
     3,
-    6.1,
   ],
-  [
-    "IDOR on the order detail endpoint",
-    "IDOR",
-    "high",
-    "order_id",
-    "GET",
-    3,
-    8.1,
-  ],
+  ["IDOR on the order detail endpoint", "IDOR", "high", "order_id", "GET", 3],
   [
     "BOLA in the vehicle report API",
     "IDOR",
@@ -53,17 +42,8 @@ const rows = [
     "vehicle_id",
     "GET",
     4,
-    9.1,
   ],
-  [
-    "SSRF through the webhook test endpoint",
-    "SSRF",
-    "high",
-    "url",
-    "POST",
-    4,
-    8.2,
-  ],
+  ["SSRF through the webhook test endpoint", "SSRF", "high", "url", "POST", 4],
   [
     "SQL injection in the coupon lookup",
     "SQL Injection",
@@ -71,7 +51,6 @@ const rows = [
     "q",
     "GET",
     5,
-    9.8,
   ],
   [
     "Path traversal in the invoice download",
@@ -80,7 +59,6 @@ const rows = [
     "file",
     "GET",
     6,
-    7.5,
   ],
   [
     "Open redirect on the login return path",
@@ -89,7 +67,6 @@ const rows = [
     "next",
     "GET",
     6,
-    3.1,
   ],
   [
     "Mass assignment on the profile update",
@@ -98,7 +75,6 @@ const rows = [
     "role",
     "PUT",
     7,
-    6.5,
   ],
   [
     "Missing CSRF protection on email change",
@@ -107,7 +83,6 @@ const rows = [
     "email",
     "POST",
     8,
-    6.5,
   ],
   [
     "Session persists after password reset",
@@ -116,7 +91,6 @@ const rows = [
     "token",
     "POST",
     9,
-    6.4,
   ],
   [
     "GraphQL introspection exposed in production",
@@ -125,7 +99,6 @@ const rows = [
     "query",
     "POST",
     10,
-    3.7,
   ],
   [
     "Internal application paths in error response",
@@ -134,7 +107,6 @@ const rows = [
     "id",
     "GET",
     12,
-    2.7,
   ],
   [
     "Reflected XSS in the feedback preview",
@@ -143,7 +115,6 @@ const rows = [
     "message",
     "POST",
     13,
-    6.1,
   ],
 ] as const
 const hosts = [
@@ -200,6 +171,7 @@ const contractFindings = [
 ].map((record, i) => ({
   ...record,
   id: `SC-${String(i + 1).padStart(3, "0")}`,
+  ...demoAssessments[`SC-${String(i + 1).padStart(3, "0")}`],
   asset_type: "smart_contract",
   chain: "Local EVM",
   chain_id: 31337,
@@ -257,6 +229,7 @@ export const otherFindings = [
   },
 ].map((record) => ({
   ...record,
+  ...demoAssessments[record.id],
   asset_type: "other",
   status: "candidate",
   verified: false,
@@ -264,8 +237,6 @@ export const otherFindings = [
   payload: "",
   evidence: ["README.md"],
   source: "demo",
-  demo_note:
-    "Fictional training example. Reproduction steps have not been run; no vulnerability is confirmed.",
 }))
 
 export const demoDocument = {
@@ -282,6 +253,8 @@ export const demoDocument = {
               : hosts[3]
       return {
         id: `HMS-${String(i + 1).padStart(3, "0")}`,
+        ...demoAssessments[`HMS-${String(i + 1).padStart(3, "0")}`],
+        asset_type: "web",
         title: r[0],
         vulnerability_type: r[1],
         severity: r[2],
@@ -290,9 +263,6 @@ export const demoDocument = {
         found_at: new Date(
           Date.now() - (Number(r[5]) * 24 + 4) * 3_600_000
         ).toISOString(),
-        cvss_score: r[6],
-        cvss_vector:
-          i === 0 ? "CVSS:3.0/AV:N/AC:L/PR:N/UI:R/S:C/C:L/I:L/A:N" : "",
         host,
         url: `https://${host}/${i < 4 ? "labs/xss" : "api/v1"}/${i + 1}`,
         status: i < 10 ? "confirmed" : "candidate",
@@ -301,13 +271,6 @@ export const demoDocument = {
           i === 0
             ? "Attacker-controlled input is reflected into the page without output encoding. JavaScript can run in the victim’s browser within the application origin, allowing page content to be read and actions to be performed as the user."
             : `The ${r[1]} finding could affect the confidentiality or integrity of the affected application. This sample describes a controlled training environment.`,
-        deliverability:
-          i === 0
-            ? "Requires a victim to open a crafted page and submit the vulnerable form. No authenticated session was required in the lab verification."
-            : "Reproduced against the isolated lab target using the affected endpoint and parameter. Confirm the preconditions against the authorized target before reporting.",
-        data_exposure:
-          "Application data within the current lab session. No production or personal data was accessed.",
-        harm: "Potential unauthorized access or modification of application state. Business impact depends on the deployment and user permissions.",
         steps_to_reproduce: [
           `Open the authorized lab endpoint: https://${host}/${i < 4 ? "labs/xss" : "api/v1"}/${i + 1}.`,
           `Submit the ${r[3]} parameter using the ${r[4]} method with the proof-of-concept input in the evidence record.`,
