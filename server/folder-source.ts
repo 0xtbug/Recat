@@ -15,6 +15,15 @@ function fileKey(filename: string) {
   return process.platform === "win32" ? filename.toLowerCase() : filename
 }
 
+// These contain reproduction artifacts or tooling, rather than report records.
+// Evidence reads and project downloads still include their files.
+const artifactDirectories = new Set(["poc", "test", "node_modules", ".git"])
+const dependencyManifests = new Set([
+  "package.json",
+  "package-lock.json",
+  "npm-shrinkwrap.json",
+])
+
 export class FolderSource {
   readonly configFile: string
   readonly root: string
@@ -167,11 +176,17 @@ export class FolderSource {
       entries.sort((a, b) => a.name.localeCompare(b.name))
       for (const entry of entries) {
         const filename = path.join(directory, entry.name)
+        const name = entry.name.toLowerCase()
         if (entry.isDirectory()) {
+          if (artifactDirectories.has(name)) continue
           await visit(filename)
           continue
         }
-        if (!entry.isFile() || !entry.name.toLowerCase().endsWith(".json"))
+        if (
+          !entry.isFile() ||
+          !name.endsWith(".json") ||
+          dependencyManifests.has(name)
+        )
           continue
         const sourcePath = path
           .relative(folder, filename)
