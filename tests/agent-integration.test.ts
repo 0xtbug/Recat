@@ -14,7 +14,9 @@ test("the installable agent package contains only the portable generated SKILL.m
   const directory = new URL("../skills/", import.meta.url)
   expect(readdirSync(directory)).toEqual(["SKILL.md"])
   const content = readFileSync(new URL("SKILL.md", directory), "utf8")
-  expect(content).toBe(agentPrompt(""))
+  expect(content.replaceAll("\r\n", "\n")).toBe(
+    agentPrompt("").replaceAll("\r\n", "\n")
+  )
   expect(content).toContain("not to the agent workspace or installed skill")
   expect(content).not.toMatch(/[A-Za-z]:\\/)
 })

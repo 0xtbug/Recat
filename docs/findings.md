@@ -8,7 +8,7 @@ The default source is `finding/source` relative to the project root, one level a
 
 The server password is configured with `RECAT_PASSWORD`. Source settings persist in `.recat/settings.json` in the parent workspace.
 
-All project subfolders are scanned recursively every 5 seconds. Refresh reads immediately. Added, edited, and deleted files update the workspace. Symbolic links are not followed. Invalid JSON, unreadable files, and files over 10 MB produce warnings while other valid files remain visible. No demo data is substituted for an empty source.
+Project subfolders are scanned recursively every 5 seconds. Refresh reads immediately. Finding discovery skips artifact directories named `poc`, `test`, `node_modules`, or `.git`, and dependency manifests named `package.json`, `package-lock.json`, or `npm-shrinkwrap.json` (case-insensitive). Keep finding records outside those directories. Listed evidence files are also excluded from finding discovery. These exclusions do not prevent reading listed evidence or downloading the project archive. Added, edited, and deleted report files update the workspace. Symbolic links are not followed. Invalid report JSON, unreadable report files, and report files over 10 MB produce warnings while other valid files remain visible. No demo data is substituted for an empty source.
 
 ```text
 finding/source/

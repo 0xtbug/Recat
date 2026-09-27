@@ -212,6 +212,50 @@ test("referenced JSON proof files are evidence rather than additional findings",
   expect(proof.content).toContain("Verification details")
 })
 
+test("PoC artifacts and dependency manifests do not become findings or source warnings", async () => {
+  const { root, source } = await fixture()
+  const folder = path.join(root, "finding/source/project-a/bug/webhook-bypass")
+  const artifacts = {
+    "poc/live-evidence.json": '{"requests": [], "title": "PoC evidence"}',
+    "poc/package.json": '{"name": "reproduction"}',
+    "poc/package-lock.json": '{"lockfileVersion": 3}',
+    "poc/node_modules/dependency/package.json": "{invalid dependency artifact",
+    "test/results.json": '{"title": "Test output"}',
+    "node_modules/dependency/package.json": "{invalid dependency artifact",
+    ".git/config.json": "{invalid git artifact",
+    "package.json": '{"name": "report-tooling"}',
+    "package-lock.json": '{"lockfileVersion": 3}',
+    "npm-shrinkwrap.json": '{"lockfileVersion": 3}',
+  }
+  for (const [filename, content] of Object.entries(artifacts)) {
+    await mkdir(path.dirname(path.join(folder, filename)), { recursive: true })
+    await writeFile(path.join(folder, filename), content)
+  }
+  await writeFile(
+    path.join(folder, "finding.json"),
+    JSON.stringify({
+      title: "Actual webhook finding",
+      evidence: ["poc/live-evidence.json", "poc/package.json"],
+    })
+  )
+  const snapshot = await source.scan()
+  expect(snapshot.data.warnings).toEqual([])
+  expect(snapshot.data.findings).toHaveLength(1)
+  expect(snapshot.fileCount).toBe(1)
+  const finding = snapshot.data.findings[0]
+  expect(
+    (await source.readEvidence(finding.id, "poc/live-evidence.json")).content
+  ).toBe(artifacts["poc/live-evidence.json"])
+  const archive = unzipSync((await source.downloadProject(finding.id)).content)
+  expect(
+    strFromU8(archive["project-a/bug/webhook-bypass/poc/package.json"])
+  ).toBe(artifacts["poc/package.json"])
+  await writeFile(path.join(folder, "finding.json"), "{invalid finding")
+  const invalid = await source.scan()
+  expect(invalid.data.warnings).toHaveLength(1)
+  expect(invalid.data.warnings[0]).toContain("finding.json")
+})
+
 test.skipIf(platform !== "win32")(
   "evidence exclusion follows Windows case-insensitive filenames",
   async () => {
