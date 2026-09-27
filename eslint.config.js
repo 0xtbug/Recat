@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import { defineConfig, globalIgnores } from 'eslint/config'
 
 export default defineConfig([
-  globalIgnores(['dist']),
+  globalIgnores(['dist', 'qa']),
   {
     files: ['**/*.{ts,tsx}'],
     extends: [
@@ -17,6 +17,18 @@ export default defineConfig([
     ],
     languageOptions: {
       globals: globals.browser,
+    },
+  },
+  {
+    files: ['server/**/*.ts', 'vite.config.ts'],
+    languageOptions: { globals: globals.node },
+  },
+  {
+    files: ['src/components/ui/{button,badge,sidebar,tabs}.tsx'],
+    rules: {
+      'react-refresh/only-export-components': ['error', {
+        allowExportNames: ['buttonVariants', 'badgeVariants', 'useSidebar', 'tabsListVariants'],
+      }],
     },
   },
 ])
