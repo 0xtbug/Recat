@@ -30,3 +30,28 @@ test("demo and downloadable sample include Other findings without invented verif
     ])
   }
 })
+
+test("every demo finding supplies the impact panels and a documented fictional CVSS assessment", () => {
+  const sample = normalizeDataset(
+    JSON.parse(
+      readFileSync(
+        new URL("../public/recat-sample.json", import.meta.url),
+        "utf8"
+      )
+    )
+  )
+  for (const dataset of [demoDataset, sample]) {
+    expect(dataset.findings).toHaveLength(23)
+    for (const finding of dataset.findings) {
+      expect(finding.delivery.trim().length).toBeGreaterThan(20)
+      expect(finding.exposure.trim().length).toBeGreaterThan(20)
+      expect(finding.harm.trim().length).toBeGreaterThan(20)
+      expect(finding.cvss).not.toBeNull()
+      expect(finding.vector).toMatch(
+        /^CVSS:3\.1\/AV:[NALP]\/AC:[LH]\/PR:[NLH]\/UI:[NR]\/S:[UC]\/C:[NLH]\/I:[NLH]\/A:[NLH]$/
+      )
+      expect(finding.raw.cvss_rationale).toBeTruthy()
+      expect(finding.raw.demo_note).toContain("Fictional")
+    }
+  }
+})

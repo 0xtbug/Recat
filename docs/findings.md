@@ -70,6 +70,8 @@ Other findings use the same source folder, status, evidence viewer, and export w
 
 Describe the affected platform and supporting evidence in the report. Web findings can use `url`, `host`, `parameter`, and `method`. Other fields include `found_at`, `cvss_score`, `cvss_vector`, `verified`, `payload`, `deliverability`, `data_exposure`, and `harm`. Coverage uses `targets` records with `name`, `host`, `subdomains`, `endpoints`, and `last_scan`.
 
+The reporting skill requires top-level `deliverability` (attack path and prerequisites), `data_exposure` (affected data and demonstrated scope), and `harm` (supported consequences). Writing these only in the Markdown report or `impact` does not populate their dashboard fields. Explain unverified or inapplicable assessments explicitly. Include `cvss_score` and a matching version-prefixed `cvss_vector` when supported by the evidence, with the metric rationale in the report. Otherwise use `cvss_score: null` and `cvss_vector: ""` and explain the limitation in the report. Recat displays reported CVSS values; it does not calculate a score from severity or Markdown evidence.
+
 Finding status comes from the agent's JSON output:
 
 - `candidate`: not yet scanned or checked; this is the default for a new finding.
