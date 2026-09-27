@@ -1,0 +1,1 @@
+{"findings":[{"title":"Valid import check","severity":"high","vulnerability_type":"constructor","host":"qa.test"},null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null,null],"targets":[{},{"host":42}]}
