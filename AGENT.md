@@ -35,7 +35,7 @@ The Git repository and web application are currently in `frontend/` inside the w
 | `src/components/source-settings.tsx`                                      | Source folder selection and agent integration                                |
 | `src/components/agent-integration.tsx`                                    | Copy/download of the single reporting `SKILL.md`                             |
 | `src/components/import-dialog.tsx`                                        | JSON import and sample download                                              |
-| `src/components/json-download.tsx`, `src/components/project-download.tsx` | JSON and project ZIP export                                                  |
+| `src/components/json-download.tsx`, `src/components/project-download.tsx` | JSON and finding ZIP export                                                  |
 | `src/components/ui/`                                                      | Shared shadcn/Base UI components                                             |
 | `src/index.css`, `src/components/theme-provider.tsx`                      | Styles and light/dark theme                                                  |
 

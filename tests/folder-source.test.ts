@@ -4,7 +4,7 @@ import { tmpdir } from "node:os"
 import path from "node:path"
 import { platform } from "node:process"
 import { FolderSource } from "../server/folder-source"
-import { selectFindings } from "../src/lib/findings"
+import { normalizeDataset, selectFindings } from "../src/lib/findings"
 import { contractExample, otherExample } from "../src/lib/agent-integration"
 import { unzipSync, strFromU8 } from "fflate"
 
@@ -94,7 +94,9 @@ test("generated finding layout loads reports, nested PoC files, contract tests, 
     )
   }
   const archive = await source.downloadProject(finding.id)
-  expect(archive.filename).toBe("examplemy.com.zip")
+  expect(archive.filename).toBe(
+    "finding-examplemy.com-bug-missing-authorization-finding.json-sc-001-514ffc12.zip"
+  )
   const files = unzipSync(archive.content)
   for (const [filename, content] of Object.entries(evidence)) {
     expect(
@@ -106,6 +108,110 @@ test("generated finding layout loads reports, nested PoC files, contract tests, 
   )
   expect(archivedFinding.id).toBe("sc-001")
   expect(archivedFinding.evidence).toEqual(Object.keys(evidence))
+})
+
+test("finding ZIP excludes sibling finding folders", async () => {
+  const { root, source } = await fixture()
+  const project = path.join(root, "finding/source/project-a/bug")
+  await mkdir(path.join(project, "first"), { recursive: true })
+  await mkdir(path.join(project, "second"), { recursive: true })
+  await writeFile(
+    path.join(project, "first/finding.json"),
+    JSON.stringify({ id: "first", title: "First", evidence: ["proof.txt"] })
+  )
+  await writeFile(path.join(project, "first/proof.txt"), "first proof")
+  await writeFile(
+    path.join(project, "second/finding.json"),
+    JSON.stringify({ id: "second", title: "Second", evidence: ["proof.txt"] })
+  )
+  await writeFile(path.join(project, "second/proof.txt"), "second proof")
+
+  const finding = (await source.scan()).data.findings.find((item) => item.title === "First")!
+  const files = unzipSync((await source.downloadProject(finding.id)).content)
+  expect(strFromU8(files["project-a/bug/first/proof.txt"])).toBe("first proof")
+  expect(Object.keys(files).some((key) => key.includes("/second/"))).toBe(false)
+})
+
+test("finding ZIP includes only the selected record and its evidence from a shared JSON file", async () => {
+  const { root, source } = await fixture()
+  const project = path.join(root, "finding/source/project-a")
+  await writeFile(
+    path.join(project, "findings.json"),
+    JSON.stringify({
+      findings: [
+        {
+          id: "first",
+          title: "First",
+          evidence: ["first.txt", "findings.json"],
+          custom_note: "keep this metadata",
+        },
+        { id: "second", title: "Second", evidence: ["second.txt"] },
+      ],
+    })
+  )
+  await writeFile(path.join(project, "first.txt"), "first proof")
+  await writeFile(path.join(project, "second.txt"), "second proof")
+  await writeFile(path.join(project, "unlisted.txt"), "unrelated project file")
+
+  const finding = (await source.scan()).data.findings.find((item) => item.title === "First")!
+  const files = unzipSync((await source.downloadProject(finding.id)).content)
+  expect(Object.keys(files).sort()).toEqual([
+    "project-a/findings.json",
+    "project-a/first.txt",
+  ].sort())
+  const record = JSON.parse(strFromU8(files["project-a/findings.json"]))
+  expect(record.findings ?? [record]).toHaveLength(1)
+  expect((record.findings ?? [record])[0].title).toBe("First")
+  expect((record.findings ?? [record])[0].custom_note).toBe("keep this metadata")
+  expect(normalizeDataset(record).findings[0].title).toBe("First")
+  expect(strFromU8(files["project-a/first.txt"])).toBe("first proof")
+  expect(files["project-a/second.txt"]).toBeUndefined()
+})
+
+test("finding ZIP rejects evidence paths outside the selected project", async () => {
+  const { root, source } = await fixture()
+  await writeFile(
+    path.join(root, "finding/source/project-a/finding.json"),
+    JSON.stringify({
+      id: "first",
+      title: "First",
+      evidence: ["../project-b/secret.txt"],
+    })
+  )
+  await writeFile(
+    path.join(root, "finding/source/project-b/secret.txt"),
+    "secret from another project"
+  )
+  const finding = (await source.scan()).data.findings[0]
+  await expect(source.downloadProject(finding.id)).rejects.toThrow(
+    "Evidence must stay inside its project folder"
+  )
+})
+
+test("finding ZIP filenames remain distinct when long shared paths are truncated", async () => {
+  const { root, source } = await fixture()
+  const folder = path.join(
+    root,
+    "finding/source/project-a",
+    `segment-${"x".repeat(70)}`
+  )
+  await mkdir(folder, { recursive: true })
+  await writeFile(
+    path.join(folder, "findings.json"),
+    JSON.stringify({
+      findings: [
+        { id: "first", title: "First" },
+        { id: "second", title: "Second" },
+      ],
+    })
+  )
+  const findings = (await source.scan()).data.findings
+  expect(findings).toHaveLength(2)
+  const filenames = await Promise.all(
+    findings.map(async (finding) => (await source.downloadProject(finding.id)).filename)
+  )
+  expect(filenames[0]).not.toBe(filenames[1])
+  expect(filenames.every((name) => name.length <= 92)).toBe(true)
 })
 test("reads all project folders, preserving evidence and independent IDs", async () => {
   const { root, source } = await fixture()

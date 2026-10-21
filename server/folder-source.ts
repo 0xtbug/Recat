@@ -10,6 +10,7 @@ import {
 import path from "node:path"
 import { zipSync, type Zippable } from "fflate"
 import { normalizeDataset, type Dataset } from "../src/lib/findings.ts"
+import { findingZipFilename } from "../src/lib/finding-zip.ts"
 
 function fileKey(filename: string) {
   return process.platform === "win32" ? filename.toLowerCase() : filename
@@ -113,47 +114,62 @@ export class FolderSource {
     const finding = snapshot.data.findings.find((item) => item.id === findingId)
     if (!finding) throw new Error("Finding not found")
     const root = await realpath(snapshot.folder)
+    const sourceFile = await realpath(path.join(root, finding.sourcePath))
     const project = await realpath(
       path.join(
         root,
         finding.sourcePath.includes("/") ? finding.sourcePath.split("/")[0] : ""
       )
     )
-    const relative = path.relative(root, project)
-    if (
-      relative === ".." ||
-      relative.startsWith(`..${path.sep}`) ||
-      path.isAbsolute(relative)
-    )
-      throw new Error("Project must stay inside the source folder")
+    function inside(base: string, filename: string) {
+      const relative = path.relative(base, filename)
+      return (
+        relative !== ".." &&
+        !relative.startsWith(`..${path.sep}`) &&
+        !path.isAbsolute(relative)
+      )
+    }
+    if (!inside(root, project) || !inside(project, sourceFile))
+      throw new Error("Finding must stay inside its project folder")
     const name = path.basename(project)
     const files: Zippable = {}
     let totalBytes = 0
     let fileCount = 0
-    async function collect(directory: string) {
-      for (const entry of await readdir(directory, { withFileTypes: true })) {
-        const filename = path.join(directory, entry.name)
-        if (entry.isDirectory()) {
-          const key = `${name}/${path.relative(project, filename).split(path.sep).join("/")}/`
-          files[key] = new Uint8Array()
-          await collect(filename)
-        } else if (entry.isFile()) {
-          const info = await stat(filename)
-          totalBytes += info.size
-          if (++fileCount > 10000 || totalBytes > 100 * 1024 * 1024)
-            throw new Error("Project archive exceeds 100 MB or 10,000 files")
-          const content = await readFile(filename)
-          totalBytes += content.byteLength - info.size
-          if (totalBytes > 100 * 1024 * 1024)
-            throw new Error("Project archive exceeds 100 MB")
-          files[
-            `${name}/${path.relative(project, filename).split(path.sep).join("/")}`
-          ] = content
-        }
-      }
+    function add(filename: string, content: Uint8Array) {
+      totalBytes += content.byteLength
+      if (++fileCount > 10000 || totalBytes > 100 * 1024 * 1024)
+        throw new Error("Finding archive exceeds 100 MB or 10,000 files")
+      files[`${name}/${path.relative(project, filename).split(path.sep).join("/")}`] =
+        content
     }
-    await collect(project)
-    return { filename: `${name}.zip`, content: zipSync(files) }
+    const evidencePaths = new Set<string>()
+    for (const evidence of finding.evidence) {
+      const candidate = path.resolve(path.dirname(sourceFile), evidence)
+      if (!inside(project, candidate))
+        throw new Error("Evidence must stay inside its project folder")
+      let resolved: string
+      try {
+        resolved = await realpath(candidate)
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code === "ENOENT") continue
+        throw error
+      }
+      if (!inside(project, resolved))
+        throw new Error("Evidence must stay inside its project folder")
+      if (fileKey(resolved) === fileKey(sourceFile)) continue
+      if (evidencePaths.has(fileKey(candidate))) continue
+      evidencePaths.add(fileKey(candidate))
+      const info = await stat(resolved)
+      if (!info.isFile()) throw new Error("Evidence must be a file")
+      if (totalBytes + info.size > 100 * 1024 * 1024)
+        throw new Error("Finding archive exceeds 100 MB or 10,000 files")
+      add(candidate, await readFile(resolved))
+    }
+    add(sourceFile, Buffer.from(JSON.stringify(finding.raw, null, 2)))
+    return {
+      filename: findingZipFilename(finding.id),
+      content: zipSync(files),
+    }
   }
   async scan() {
     const folder = await this.folder()
