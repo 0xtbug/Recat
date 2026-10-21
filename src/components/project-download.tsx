@@ -1,6 +1,7 @@
 import { RiDownloadLine } from "@remixicon/react"
 import { Button } from "@/components/ui/button"
 import type { Finding } from "@/lib/findings"
+import { findingZipFilename } from "@/lib/finding-zip"
 
 export function ProjectDownload({
   finding,
@@ -18,14 +19,12 @@ export function ProjectDownload({
       render={
         <a
           href={disabled ? undefined : href}
-          download={
-            disabled ? undefined : `${finding.project || "project"}.zip`
-          }
+          download={disabled ? undefined : findingZipFilename(finding.id)}
         />
       }
     >
       <RiDownloadLine />
-      Download folder ZIP
+      Download finding ZIP
     </Button>
   )
 }

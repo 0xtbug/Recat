@@ -92,7 +92,7 @@ export function folderApi(
         const archive = await source.downloadProject(finding)
         res.writeHead(200, {
           "Content-Type": "application/zip",
-          "Content-Disposition": `attachment; filename="project.zip"; filename*=UTF-8''${encodeURIComponent(archive.filename)}`,
+          "Content-Disposition": `attachment; filename="${archive.filename}"; filename*=UTF-8''${encodeURIComponent(archive.filename)}`,
           "Cache-Control": "no-store",
           "Content-Length": archive.content.byteLength,
         })

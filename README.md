@@ -15,7 +15,7 @@ Review findings from Hermes or other agents, inspect evidence, and export report
 
 - Dashboard with severity, status, activity, and asset coverage.
 - Search and filters by project, category, vulnerability class, and status.
-- Evidence viewer, JSON exports, and project ZIP downloads.
+- Evidence viewer, JSON exports, and ZIP downloads for individual findings.
 - Password access, censored view, and a reporting skill for Codex, Claude Code, and Hermes.
 
 ## Installation

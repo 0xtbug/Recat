@@ -105,7 +105,7 @@ test("HTTP settings persists a valid folder, source returns real findings, cross
     expect(downloadHref).toBe(
       `/api/project-zip?${new URLSearchParams({ finding: snapshot.data.findings[0].id })}`
     )
-    expect(downloadMarkup).toContain('download="project.zip"')
+    expect(downloadMarkup).toContain('download="finding-project-finding.json-finding-1-7a39dce9.zip"')
     const disabledMarkup = renderToStaticMarkup(
       createElement(ProjectDownload, {
         finding: snapshot.data.findings[0],
@@ -118,12 +118,12 @@ test("HTTP settings persists a valid folder, source returns real findings, cross
     const archive = await fetch(zipUrl)
     expect(archive.status).toBe(200)
     expect(archive.headers.get("content-type")).toBe("application/zip")
-    expect(archive.headers.get("content-disposition")).toContain("project.zip")
+    expect(archive.headers.get("content-disposition")).toContain(
+      'filename="finding-project-finding.json-finding-1-7a39dce9.zip"'
+    )
     const files = unzipSync(new Uint8Array(await archive.arrayBuffer()))
     expect(strFromU8(files["project/proof.md"])).toContain("# API proof")
-    expect(files["project/evidence/proof.bin"]).toEqual(
-      new Uint8Array([0, 255, 42])
-    )
+    expect(files["project/evidence/proof.bin"]).toBeUndefined()
     expect(files["project/finding.json"]).toBeDefined()
     expect(
       (await fetch(base + "/api/project-zip?finding=missing")).status
