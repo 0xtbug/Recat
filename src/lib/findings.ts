@@ -67,6 +67,7 @@ export type Target = {
   endpoints: number | null
   lastScan: string | null
 }
+export type TargetCoverageRow = Target & { key: string; findingCount: number }
 export type Dataset = {
   findings: Finding[]
   targets: Target[]
@@ -303,6 +304,52 @@ export function selectFindings(
     })
 }
 
+export function targetCoverageRows(data: Dataset): TargetCoverageRow[] {
+  const rows = new Map<string, TargetCoverageRow>()
+  for (const target of data.targets) {
+    const key = `host:${target.host.toLowerCase()}`
+    if (!rows.has(key)) rows.set(key, { ...target, key, findingCount: 0 })
+  }
+  for (const finding of data.findings) {
+    if (finding.host === "Unknown host") continue
+    const contract =
+      finding.assetType === "smart_contract" && finding.contractAddress
+    const host = finding.host
+    const reported = rows.get(`host:${host.toLowerCase()}`)
+    if (reported) {
+      reported.findingCount++
+      continue
+    }
+    const chainId = finding.chainId.trim()
+    const chain = finding.chain.trim()
+    const key = contract
+      ? `contract:${host.toLowerCase()}:${(chainId || chain || "unknown").toLowerCase()}`
+      : `host:${host.toLowerCase()}`
+    const row = rows.get(key)
+    if (row) row.findingCount++
+    else {
+      rows.set(key, {
+        key,
+        name: contract
+          ? chain
+            ? chainId
+              ? `${chain} (${chainId})`
+              : chain
+            : chainId
+              ? `Chain ${chainId}`
+              : host
+          : host,
+        host,
+        subdomains: null,
+        endpoints: null,
+        lastScan: null,
+        findingCount: 1,
+      })
+    }
+  }
+  return [...rows.values()]
+}
+
 export function summarize(data: Dataset) {
   const complete = (key: "subdomains" | "endpoints") =>
     data.targets.length && data.targets.every((t) => t[key] !== null)
@@ -315,13 +362,7 @@ export function summarize(data: Dataset) {
     falsePositive: data.findings.filter((f) => f.status === "false_positive")
       .length,
     verified: data.findings.filter((f) => f.verified).length,
-    targets:
-      data.targets.length ||
-      new Set(
-        data.findings
-          .filter((f) => f.host !== "Unknown host")
-          .map((f) => f.host)
-      ).size,
+    targets: targetCoverageRows(data).length,
     subdomains: complete("subdomains"),
     endpoints: complete("endpoints"),
     severity: Object.fromEntries(

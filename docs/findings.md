@@ -68,7 +68,7 @@ Other findings use the same source folder, status, evidence viewer, and export w
 }
 ```
 
-Describe the affected platform and supporting evidence in the report. Web findings can use `url`, `host`, `parameter`, and `method`. Other fields include `found_at`, `cvss_score`, `cvss_vector`, `verified`, `payload`, `deliverability`, `data_exposure`, and `harm`. Coverage uses `targets` records with `name`, `host`, `subdomains`, `endpoints`, and `last_scan`.
+Describe the affected platform and supporting evidence in the report. Web findings can use `url`, `host`, `parameter`, and `method`. Other fields include `found_at`, `cvss_score`, `cvss_vector`, `verified`, `payload`, `deliverability`, `data_exposure`, and `harm`. Coverage uses `targets` records with `name`, `host`, `subdomains`, `endpoints`, and `last_scan`. The dashboard combines these records with hosts observed in findings and shows a finding count for each host. Inferred contract targets with the same address are separated by chain when a chain ID or name is available. A dash means a coverage metric was not reported; Recat does not infer subdomain, endpoint, or scan counts from findings.
 
 The reporting skill requires top-level `deliverability` (attack path and prerequisites), `data_exposure` (affected data and demonstrated scope), and `harm` (supported consequences). Writing these only in the Markdown report or `impact` does not populate their dashboard fields. Explain unverified or inapplicable assessments explicitly. Include `cvss_score` and a matching version-prefixed `cvss_vector` when supported by the evidence, with the metric rationale in the report. Otherwise use `cvss_score: null` and `cvss_vector: ""` and explain the limitation in the report. Recat displays reported CVSS values; it does not calculate a score from severity or Markdown evidence.
 
@@ -80,7 +80,7 @@ Finding status comes from the agent's JSON output:
 
 Status spelling is case-insensitive; spaces and hyphens are accepted in place of underscores. Original JSON stays unchanged. A separate `verified` badge is shown only for confirmed findings with explicit supporting verification. Recat displays these outcomes and does not perform vulnerability scans or automatically confirm findings.
 
-Project names come from the first subfolder; files directly in the source folder use its name. Findings retain their original record ID in the raw JSON; UI IDs include the relative file path to avoid cross-project collisions. The Project filter and search include project/source metadata. Payloads are displayed as text.
+Project names come from the first subfolder; files directly in the source folder use its name. Findings retain their original record ID in the raw JSON; UI IDs include the relative file path to avoid cross-project collisions. The Project filter and search include project/source metadata. Payloads are displayed as text. The Findings list shows 20 results per page after filtering and sorting; changing a filter or sort returns to page 1.
 
 **Censored mode** in Findings masks identifying details, descriptions, payloads, and raw records with `***`, and hides PoC contents. Severity, class, status, dates, and counts stay visible. Copy uses the masked text, and downloads are disabled while this mode is active. The preference persists in this browser; source files are unchanged. This is a display setting, not a replacement for login or access control.
 
