@@ -1,3 +1,4 @@
+import { useRef, useState } from "react"
 import {
   RiSearchLine,
   RiArrowRightUpLine,
@@ -32,6 +33,7 @@ import {
 import { SeverityBadge } from "./severity-badge"
 import { StatusBadge } from "./status-badge"
 import { maskFinding } from "@/lib/censor"
+import { paginateFindings } from "@/lib/findings-pagination"
 import {
   selectFindings,
   relativeDate,
@@ -91,6 +93,28 @@ export function FindingsTable({
   onFinding: (f: Finding) => void
 }) {
   const shown = selectFindings(findings, filters)
+  const filterKey = JSON.stringify([
+    filters.query,
+    filters.severity,
+    filters.status,
+    filters.type,
+    filters.assetType,
+    filters.project,
+    filters.sort,
+  ])
+  const [pagination, setPagination] = useState({ filterKey, page: 1 })
+  const requestedPage = pagination.filterKey === filterKey ? pagination.page : 1
+  const page = paginateFindings(shown, requestedPage)
+  if (pagination.filterKey !== filterKey || pagination.page !== page.page)
+    setPagination({ filterKey, page: page.page })
+  const resultsRef = useRef<HTMLDivElement>(null)
+  function navigatePage(nextPage: number) {
+    setPagination({ filterKey, page: nextPage })
+    requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({ block: "start", inline: "nearest" })
+      resultsRef.current?.focus({ preventScroll: true })
+    })
+  }
   const set = (key: keyof Filters, value: string) =>
     onFilters({ ...filters, [key]: value })
   const active =
@@ -234,7 +258,13 @@ export function FindingsTable({
           )}
         </div>
       </div>
-      <Card className="">
+      <Card
+        ref={resultsRef}
+        role="region"
+        aria-label="Findings results"
+        tabIndex={-1}
+        className="focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
         <Table className="">
           <TableHeader>
             <TableRow>
@@ -253,7 +283,7 @@ export function FindingsTable({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {shown.map((original, index) => {
+            {page.items.map((original, index) => {
               const f = censored ? maskFinding(original) : original
               return (
                 <TableRow
@@ -274,7 +304,7 @@ export function FindingsTable({
                       className="max-w-full justify-start truncate"
                       aria-label={
                         censored
-                          ? `Open censored finding ${index + 1}`
+                          ? `Open censored finding ${page.start + index}`
                           : `Open finding: ${f.title}`
                       }
                     >
@@ -337,10 +367,38 @@ export function FindingsTable({
             )}
           </div>
         )}
-        <div className="flex justify-between gap-3 px-4 text-xs text-muted-foreground">
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 pb-4 text-xs text-muted-foreground">
           <span>
-            {shown.length} finding{shown.length === 1 ? "" : "s"}
+            {page.total
+              ? `Showing ${page.start}–${page.end} of ${page.total} finding${page.total === 1 ? "" : "s"}`
+              : "0 findings"}
           </span>
+          {page.pageCount > 1 && (
+            <nav
+              aria-label="Findings pagination"
+              className="flex items-center gap-2"
+            >
+              <Button
+                type="button"
+                variant="outline"
+                disabled={page.page === 1}
+                onClick={() => navigatePage(page.page - 1)}
+              >
+                Previous
+              </Button>
+              <span aria-live="polite">
+                Page {page.page} of {page.pageCount}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                disabled={page.page === page.pageCount}
+                onClick={() => navigatePage(page.page + 1)}
+              >
+                Next
+              </Button>
+            </nav>
+          )}
         </div>
       </Card>
     </div>

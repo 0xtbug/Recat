@@ -32,6 +32,7 @@ import {
   relativeDate,
   severities,
   summarize,
+  targetCoverageRows,
   type Dataset,
   type Finding,
 } from "@/lib/findings"
@@ -95,21 +96,16 @@ export function Dashboard({
     }
   })
   const windowTotal = days.reduce((sum, d) => sum + d.count, 0)
-  const targets = data.targets.length
-    ? data.targets
-    : Array.from(
-        new Set(
-          data.findings
-            .filter((f) => f.host !== "Unknown host")
-            .map((f) => f.host)
-        )
-      ).map((host) => ({
-        name: host,
-        host,
-        subdomains: null,
-        endpoints: null,
-        lastScan: null,
-      }))
+  const targets = targetCoverageRows(data)
+  const hasMappedCounts = data.targets.some(
+    (target) => target.subdomains !== null || target.endpoints !== null
+  )
+  const coverageNote = (key: "subdomains" | "endpoints", total: number | null) =>
+    total !== null
+      ? "Reported target coverage"
+      : data.targets.some((target) => target[key] !== null)
+        ? "Coverage incomplete"
+        : "No coverage data imported"
   const cards = [
     {
       label: "Smart contract findings",
@@ -134,19 +130,13 @@ export function Dashboard({
       label: "Subdomains collected",
       value: stats.subdomains ?? "—",
       icon: RiGlobalLine,
-      note:
-        stats.subdomains == null
-          ? "No coverage data imported"
-          : "Discovered across all targets",
+      note: coverageNote("subdomains", stats.subdomains),
     },
     {
       label: "Endpoints mapped",
       value: stats.endpoints ?? "—",
       icon: RiRouteLine,
-      note:
-        stats.endpoints == null
-          ? "No coverage data imported"
-          : `Across ${stats.targets} target hosts`,
+      note: coverageNote("endpoints", stats.endpoints),
     },
   ]
   return (
@@ -292,44 +282,68 @@ export function Dashboard({
         </Panel>
       </div>
       <div className="grid gap-4 xl:grid-cols-2">
-        <Panel title="Target coverage" note="Mapped assets per target">
-          <Table className="">
-            <TableHeader>
-              <TableRow>
-                <TableHead>Target / Host</TableHead>
-                <TableHead className="text-right">Subs</TableHead>
-                <TableHead className="text-right">Endpoints</TableHead>
-                <TableHead className="text-right">Last scan</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {targets.map((t) => (
-                <TableRow key={t.host}>
-                  <TableCell>
-                    <div className="flex items-center gap-2 font-medium">
-                      <span className="" />
-                      {t.name}
-                    </div>
-                    <div className="mt-1 ml-3.5 truncate text-xs text-muted-foreground">
-                      {t.host}
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {t.subdomains ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right font-mono">
-                    {t.endpoints ?? "—"}
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    {relativeDate(t.lastScan)}
-                  </TableCell>
+        <Panel
+          title="Target coverage"
+          note={hasMappedCounts ? "— means not reported" : "No mapped counts reported"}
+        >
+          <div
+            className="max-h-72 overflow-y-auto"
+            role="region"
+            aria-label="Target coverage table"
+            tabIndex={0}
+          >
+            <Table className="table-fixed">
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[34%] whitespace-normal">Target / Host</TableHead>
+                  <TableHead className="w-[12%] px-1 text-right whitespace-normal">Subs</TableHead>
+                  <TableHead className="w-[17%] px-1 text-right whitespace-normal">Endpoints</TableHead>
+                  <TableHead className="w-[15%] px-1 text-right whitespace-normal">Findings</TableHead>
+                  <TableHead className="w-[22%] px-1 text-right whitespace-normal">Last scan</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {targets.map((t) => (
+                  <TableRow key={t.key}>
+                    <TableCell className="min-w-0">
+                      <div className="truncate font-medium" title={t.name}>
+                        {t.name}
+                      </div>
+                      {t.name.toLowerCase() !== t.host.toLowerCase() && (
+                        <div
+                          className="mt-1 truncate text-xs text-muted-foreground"
+                          title={t.host}
+                        >
+                          {t.host}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="px-1 text-right font-mono tabular-nums">
+                      {t.subdomains ?? "—"}
+                    </TableCell>
+                    <TableCell className="px-1 text-right font-mono tabular-nums">
+                      {t.endpoints ?? "—"}
+                    </TableCell>
+                    <TableCell className="px-1 text-right font-mono tabular-nums">
+                      {t.findingCount}
+                    </TableCell>
+                    <TableCell className="px-1 text-right text-muted-foreground">
+                      {t.lastScan ? relativeDate(t.lastScan) : "—"}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
           {!targets.length && (
             <p className="p-4 text-muted-foreground">
-              Import findings to see target coverage.
+              Import findings or target coverage to see hosts here.
+            </p>
+          )}
+          {targets.length > 0 && data.targets.length === 0 && (
+            <p className="px-2 pt-3 text-xs text-muted-foreground">
+              Hosts come from findings. Import target records to show mapped
+              subdomains and endpoints.
             </p>
           )}
         </Panel>
