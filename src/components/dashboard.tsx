@@ -286,11 +286,10 @@ export function Dashboard({
           title="Target coverage"
           note={hasMappedCounts ? "— means not reported" : "No mapped counts reported"}
         >
-          <div
-            className="max-h-72 overflow-y-auto"
+          <ScrollArea
+            className="[&>[data-slot=scroll-area-viewport]]:max-h-72 [&>[data-slot=scroll-area-viewport]]:pr-3"
             role="region"
             aria-label="Target coverage table"
-            tabIndex={0}
           >
             <Table className="table-fixed">
               <TableHeader>
@@ -334,7 +333,7 @@ export function Dashboard({
                 ))}
               </TableBody>
             </Table>
-          </div>
+          </ScrollArea>
           {!targets.length && (
             <p className="p-4 text-muted-foreground">
               Import findings or target coverage to see hosts here.
